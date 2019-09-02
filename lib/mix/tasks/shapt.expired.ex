@@ -50,6 +50,10 @@ defmodule Mix.Tasks.Shapt.Expired do
     |> Enum.map(&String.trim/1)
     |> Enum.map(&Module.concat([&1]))
     |> Enum.filter(&Code.ensure_loaded?/1)
+    |> Enum.map(fn m ->
+      m.start_link([])
+      m
+    end)
     |> Enum.map(&{&1, &1.expired_toggles()})
   end
 
