@@ -40,7 +40,7 @@ defmodule Shapt.Adapter do
         }
 
   @doc """
-  Verifies if a given toggle is enabled true of false.
+  Verifies if a given toggle is enabled true or false.
   This only gonna be used if `ets_cache` option is set to false.
   It receives the `toggle_name()` of the key being verified and the `state()` of the Genserver.
   It include all the `state()` because adapter configuration can be used by the adapter.
