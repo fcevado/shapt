@@ -22,8 +22,6 @@ defmodule Mix.Tasks.Shapt.Expired do
         aliases: [s: :strict, m: :module]
       )
 
-    Enum.map(opts[:module], &Mix.Task.run("compile", &1))
-
     evaluate(opts[:strict], opts[:module])
   end
 
@@ -50,6 +48,10 @@ defmodule Mix.Tasks.Shapt.Expired do
     modules
     |> String.split(",")
     |> Enum.map(&String.trim/1)
+    |> Enum.map(fn m ->
+      Mix.Task.run("compile", [m])
+      m
+    end)
     |> Enum.map(&Module.concat([&1]))
     |> Enum.filter(&Code.ensure_loaded?/1)
     |> Enum.map(fn m ->
