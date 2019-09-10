@@ -1,5 +1,11 @@
 # Changelog
 
+
+## v0.0.4
+
+* Pretty print map on GET endpoint.
+* Fix issue with mix tasks
+
 ## v0.0.3
 
 * Fix issue with mix tasks
