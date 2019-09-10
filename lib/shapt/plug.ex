@@ -23,7 +23,7 @@ defmodule Shapt.Plug do
            true <- Enum.all?(opts[:modules], &Code.ensure_loaded?/1) do
         body =
           opts[:modules]
-          |> Enum.map(&"#{inspect(&1)}: #{inspect(&1.all_values())}")
+          |> Enum.map(&"#{inspect(&1)}: #{inspect(&1.all_values(), pretty: true, width: 10)}")
           |> Enum.join("\n")
 
         halt_with_response(conn, 200, body)
