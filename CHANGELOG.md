@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.3
+
+* Fix issue with mix tasks
+
 ## v0.0.2
 
 * Make the toggle module a worker that needs to be attached to a supervision
