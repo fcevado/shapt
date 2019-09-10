@@ -7,7 +7,9 @@ defmodule Shapt.Plug do
   Those features work better when you're caching values on ets with the `ets_cache` option set as true.
   This can be configured with the options `path` and `modules`, like the example:
   ```
-  plug(Shapt.Plug, path: "/toggles", modules: [TestModule])
+  plug Shapt.Plug,
+    path: "/toggles",
+    modules: [TestModule]
   ```
   """
   if Code.ensure_loaded?(Plug) do
@@ -42,7 +44,7 @@ defmodule Shapt.Plug do
           |> Enum.map(&inspect/1)
           |> Enum.join(",")
 
-        halt_with_response(conn, 201, ~S/{"reloaded": "#{modules}"}/)
+        halt_with_response(conn, 201, "reloaded: #{modules}")
       else
         _ ->
           conn
