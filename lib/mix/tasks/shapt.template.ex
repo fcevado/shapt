@@ -23,6 +23,8 @@ defmodule Mix.Tasks.Shapt.Template do
         aliases: [m: :module, f: :file]
       )
 
+    Enum.map(opts[:module], &Mix.Task.run("compile", &1))
+
     opts[:module]
     |> generate_template()
     |> do_template(opts[:file])
