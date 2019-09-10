@@ -19,8 +19,8 @@ This are the list of main features(marked ones are already implemented):
 * [x] `Shapt.Adapters.Env` and `Shapt.Adapters.DotEnv` built-in Adapters.
 * [x] `shapt.expired` mix task that exposes toggles that had his deadline expired.
 * [x] `shapt.template` mix task that generate template files for the configured adapter.
-* [ ] Plug that provides a `GET` endpoint to inspect current state of the toggles.
-* [ ] Plug that provides a `POST` endpoint that reload toggles value(reload feature must be provided by the Adapter).
+* [x] Plug that provides a `GET` endpoint to inspect current state of the toggles.
+* [x] Plug that provides a `POST` endpoint that reload toggles value(reload feature must be provided by the Adapter).
 * [ ] Consul Adapters
 
 ## [Usage Guide](./USAGE.md)

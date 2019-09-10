@@ -23,6 +23,10 @@ defmodule Shapt do
           GenServer.start_link(__MODULE__, unquote(options), [name: __MODULE__] ++ opts)
         end
 
+        def all_values do
+          GenServer.call(__MODULE__, :all_values)
+        end
+
         def enabled?(toggle) do
           GenServer.call(__MODULE__, {:enabled, toggle})
         end
@@ -33,6 +37,10 @@ defmodule Shapt do
 
         def expired_toggles do
           GenServer.call(__MODULE__, {:expired, :all})
+        end
+
+        def reload do
+          GenServer.call(__MODULE__, :reload)
         end
 
         def template do
@@ -78,6 +86,22 @@ defmodule Shapt do
     {:ok, state}
   end
 
+  def handle_call(:all_values, _from, state) do
+    response =
+      if state[:ets] do
+        :ets.tab2list(state[:ets])
+        |> Enum.into(%{})
+      else
+        state[:toggles]
+        |> Enum.map(fn {k, o} ->
+          {state[:adapter].key_name(k, o), state[:adapter].enabled?(k, state)}
+        end)
+        |> Enum.into(%{})
+      end
+
+    {:reply, response, state}
+  end
+
   def handle_call({:enabled, toggle}, _from, state) do
     state = load(state)
 
@@ -104,6 +128,14 @@ defmodule Shapt do
 
   def handle_call({:expired, name}, _from, state) do
     {:reply, is_expired?({name, state[:toggles][name]}), state}
+  end
+
+  def handle_call(:reload, _from, state) do
+    if state[:ets] do
+      :ets.delete_all_objects(state[:ets])
+    end
+
+    {:reply, :ok, load(%{state | ets_loaded: false})}
   end
 
   def handle_call(:template, _from, state) do
