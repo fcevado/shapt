@@ -24,6 +24,9 @@ defmodule Shapt.MixProject do
   defp deps do
     [
       {:plug, "~> 1.8.3", optional: true},
+      {:jason, "~> 1.2.2", optional: true},
+      {:poison, "~> 4.0.1", optional: true},
+      {:credo, "~> 1.5.5", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.21.1", only: :dev, runtime: false}
     ]
   end
