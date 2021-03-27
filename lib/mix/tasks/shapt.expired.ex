@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Shapt.Expired do
     if Enum.any?(expired) do
       message = build_message(expired)
 
-      Mix.raise("Expired keys.\n" <> message)
+      Mix.raise("Expired keys:\n" <> message)
     end
   end
 
@@ -54,12 +54,12 @@ defmodule Mix.Tasks.Shapt.Expired do
     end)
     |> Enum.map(&Module.concat([&1]))
     |> Enum.filter(&Code.ensure_loaded?/1)
-    |> Enum.map(fn m ->
-      m.start_link([])
-      m
-    end)
     |> Enum.map(&{&1, &1.expired_toggles()})
+    |> Enum.reject(&reject_modules/1)
   end
+
+  defp reject_modules({_, []}), do: true
+  defp reject_modules(_), do: false
 
   defp build_message(expired) do
     expired
