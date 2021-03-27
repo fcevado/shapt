@@ -46,7 +46,6 @@ defmodule Mix.Tasks.Shapt.Template do
       |> Module.concat()
 
     if Code.ensure_loaded?(module) do
-      module.start_link([])
       module.template()
     else
       Mix.raise("#{module} is not available.")
