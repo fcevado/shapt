@@ -1,65 +1,96 @@
 defmodule Shapt.Adapters.Env do
   @behaviour Shapt.Adapter
+  @moduledoc """
+  """
 
   @impl Shapt.Adapter
-  def enabled?(name, state) do
-    if state[:environment] in [:test, :dev] and not is_nil(state[:toggles][name][:force]) do
-      state[:toggles][name][:force]
-    else
-      System.get_env(key_name(name, state[:toggles][name]))
-      |> to_boolean()
+  def load(opts, toggles) do
+    case opts[:from] do
+      :file -> from_file(opts[:file], toggles)
+      _from -> from_env(toggles)
     end
   end
 
   @impl Shapt.Adapter
-  def template(toggles, _opts) do
+  def create_template(_opts, toggles) do
     toggles
-    |> Enum.map(&build_line/1)
+    |> Enum.map(&get_key/1)
+    |> Enum.map(&"#{&1}=false")
     |> Enum.join("\n")
   end
 
   @impl Shapt.Adapter
-  def key_name(name, opts) do
-    name_key =
-      name
-      |> to_string()
-      |> String.replace("?", "")
-      |> String.upcase()
+  def validate_configuration(opts) do
+    case opts[:from] do
+      :file ->
+        if File.regular?(opts[:file] || "") do
+          :ok
+        else
+          "not a file"
+        end
 
-    opts[:key] || name_key
+      _from ->
+        :ok
+    end
   end
 
-  @impl Shapt.Adapter
-  def load_all(state) do
-    ets = state[:ets]
-
-    state[:toggles]
-    |> Enum.map(&read_key(&1, state[:environment]))
-    |> Enum.each(&:ets.insert_new(ets, &1))
+  defp from_env(toggles) do
+    toggles
+    |> Enum.map(&env_toggle/1)
+    |> Enum.into(%{})
   end
 
-  defp read_key({key, opts}, env) do
+  defp env_toggle(toggle) do
     value =
-      if env in [:test, :dev] and not is_nil(opts[:force]) do
-        opts[:force]
-      else
-        System.get_env(key_name(key, opts))
-        |> to_boolean()
-      end
+      toggle
+      |> get_key()
+      |> System.get_env()
+      |> to_boolean()
 
-    {key_name(key, opts), value}
+    {elem(toggle, 0), value}
   end
 
-  defp build_line({name, opts}) do
-    key = key_name(name, opts[:key])
+  defp from_file(nil, _toggles), do: %{}
 
-    value = opts[:force] || false
+  defp from_file(file, toggles) do
+    keys = Enum.map(toggles, &get_key/1)
+    values = load_file(file, keys)
 
-    "#{key}=#{value}"
+    key_toggles =
+      toggles
+      |> Enum.map(&remap_keys/1)
+      |> Enum.into(%{})
+
+    values
+    |> Enum.map(fn {k, v} -> {key_toggles[k], to_boolean(v)} end)
+    |> Enum.into(%{})
   end
 
-  defp to_boolean("True"), do: true
+  defp load_file(file, keys) do
+    case File.read(file) do
+      {:error, _err} ->
+        []
+
+      {:ok, content} ->
+        content
+        |> String.split("\n")
+        |> Enum.map(&String.split(&1, "="))
+        |> Enum.map(&List.to_tuple/1)
+        |> Enum.filter(&(elem(&1, 0) in keys))
+    end
+  end
+
+  defp remap_keys(toggle), do: {get_key(toggle), elem(toggle, 0)}
+
+  defp get_key({toggle, opts}), do: opts[:key] || toggle_key(toggle)
+
+  defp toggle_key(key) do
+    key
+    |> Atom.to_string()
+    |> String.replace("?", "")
+    |> String.upcase()
+  end
+
   defp to_boolean("true"), do: true
-  defp to_boolean(true), do: true
-  defp to_boolean(_), do: false
+  defp to_boolean(_env), do: false
 end

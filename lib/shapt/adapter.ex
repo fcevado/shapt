@@ -5,64 +5,53 @@ defmodule Shapt.Adapter do
   """
 
   @typedoc """
-  The name of toggle set in the Shapt config.
+  A keywordlist configuring your adapter.
+  To get more details read your adapter documentation.
+  """
+  @type adapter_opts :: list()
+
+  @typedoc """
+  The name of toggle set in `toggles()`.
   """
   @type toggle_name :: atom()
 
   @typedoc """
-  Toggle options configured at keyword list in the Shapt config.
-  Common options are `key_name` and `deadline`. `deadline` is required for the mix task `Mix.Tasks.Shapt.Expired`.
-  Custom Adapters can define more options.
+  Toggle options set in `toggles()`.
+  Adapters can define more options to be set.
+  The only option enforced by Shapt is `:deadline`.
   """
   @type toggle_opts :: map()
 
   @typedoc """
-  Keyword list containing all toggle and toggle options config.
+  Deadline set in `toggle_opts()`.
+  """
+  @type deadline :: Date.t()
+
+  @typedoc """
+  A keywordlist containing the `toggle_name()` and `toggle_opts()`.
   """
   @type toggles :: list({toggle_name(), toggle_opts()})
 
   @typedoc """
-  State of the GenServer created in a module that uses `Shapt`.
-  `environment` - this is a way for adapters to know in which environment they are running, in case releases are being used.
-  `ets` - reference of the ets table created when `ets_cache` option is set to true.
-  `ets_loaded` - says if `ets` has been loaded with `load_all/1` execution.
-  `toggles` - take a loot at `toggles()`
-  `adapter` - Module that is configured as the adapter.
-  `adapter_opts` - configuration for the `adapter`
+  A map containing all `toggle_name()` with the value being the current state of the toggle.
   """
-  @type state :: %{
-          environment: :dev | :test | :prod,
-          ets: reference(),
-          ets_loaded: boolean(),
-          toggles: toggles(),
-          adapter: atom(),
-          adapter_opts: list()
-        }
+  @type loaded_toggles :: %{toggle_name() => boolean()}
 
   @doc """
-  Verifies if a given toggle is enabled true or false.
-  This only gonna be used if `ets_cache` option is set to false.
-  It receives the `toggle_name()` of the key being verified and the `state()` of the Genserver.
-  It include all the `state()` because adapter configuration can be used by the adapter.
+  Invoked at the start of the worker and everytime a reload takes place to populate the current state of the toggles.
+  It should always return a map with all `toggle_name()`.
   """
-  @callback enabled?(toggle_name(), state()) :: boolean()
+  @callback load(adapter_opts(), toggles()) :: loaded_toggles()
 
   @doc """
-  Produces the template outputed by `Mix.Tasks.Shapt.Template`.
-  It receives the toggles keywordlist and the adapter options and returns the binary representing the template.
+  Invoked by the task that generates the template for the adapter.
+  It should return a string that can be used as a template, in case a template is not applyable for the adapter returns an empty string.
   """
-  @callback template(list(), map()) :: bitstring()
+  @callback create_template(adapter_opts(), toggles()) :: String.t()
 
   @doc """
-  Load all toggles current value to the ets table.
-  Please make sure to enforce values are only boolean
+  Invoked at the `init/1` callback of the worker.
+  Returning `:ok` means the configuration is valid and the adapter will be able to load the toggle state for the given configuration.
   """
-  @callback load_all(state()) :: state()
-
-  @doc """
-  Reiceves `toggle_name()` and `toggle_opts` and should return the representation of the toggle name the way the adapter understands it.
-  This is used mainly because when `ets_cache` and `ets_loaded` are both set to true, the GenServer will bypass the need to use the adapter.
-  Use the same value returned here to load the toggle in the `load_all/1` function.
-  """
-  @callback key_name(toggle_name(), toggle_opts()) :: any()
+  @callback validate_configuration(adapter_opts()) :: :ok | String.t()
 end
