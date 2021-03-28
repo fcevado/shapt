@@ -77,13 +77,9 @@ defmodule Shapt do
 
         def toggle(name, opts) do
           if name in unquote(toggles) do
-            env = opts[:env]
-            truthy = opts[:on]
-            falsy = opts[:off]
-
             name
             |> enabled?()
-            |> Shapt.Helpers.apply_toggle(truthy, falsy, env)
+            |> Shapt.Helpers.apply_toggle(opts)
           else
             :error
           end

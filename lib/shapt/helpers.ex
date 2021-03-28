@@ -20,12 +20,10 @@ defmodule Shapt.Helpers do
     adapter.create_template(adapter_opts, toggle_conf)
   end
 
-  def apply_toggle(true, f, _, env) when is_function(f), do: apply(f, env)
-  def apply_toggle(false, _, f, env) when is_function(f), do: apply(f, env)
-  def apply_toggle(false, _, {mod, fun, env}, _), do: apply(mod, fun, env)
-  def apply_toggle(true, {mod, fun, env}, _, _), do: apply(mod, fun, env)
-  def apply_toggle(false, _, {mod, fun}, env), do: apply(mod, fun, env)
-  def apply_toggle(true, {mod, fun}, _, env), do: apply(mod, fun, env)
-  def apply_toggle(true, value, _, _), do: value
-  def apply_toggle(false, _, value, _), do: value
+  def apply_toggle(true, opts), do: apply_toggle(opts[:on])
+  def apply_toggle(false, opts), do: apply_toggle(opts[:off])
+
+  defp apply_toggle({f, args}) when is_function(f), do: apply(f, args)
+  defp apply_toggle({m, f, args}), do: apply(m, f, args)
+  defp apply_toggle(term), do: term
 end
