@@ -14,6 +14,10 @@ defmodule Shapt.HelpersTest do
 
       refute Helpers.do_expired(:key, key: %{deadline: deadline})
     end
+
+    test "isn't expired without deadline" do
+      refute Helpers.do_expired(:key, key: %{})
+    end
   end
 
   describe "do_all_expired/1" do

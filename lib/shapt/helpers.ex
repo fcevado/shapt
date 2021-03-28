@@ -11,10 +11,7 @@ defmodule Shapt.Helpers do
   end
 
   defp is_expired?({_name, toggle_opts}), do: is_expired?(toggle_opts)
-
-  defp is_expired?(toggle_opts) do
-    Date.compare(toggle_opts[:deadline], Date.utc_today()) != :gt
-  end
+  defp is_expired?(toggle_opts), do: date_compare(toggle_opts[:deadline], Date.utc_today())
 
   def do_template(adapter, adapter_opts, toggle_conf) do
     adapter.create_template(adapter_opts, toggle_conf)
@@ -26,4 +23,7 @@ defmodule Shapt.Helpers do
   defp apply_toggle({f, args}) when is_function(f), do: apply(f, args)
   defp apply_toggle({m, f, args}), do: apply(m, f, args)
   defp apply_toggle(term), do: term
+
+  defp date_compare(nil, _today), do: false
+  defp date_compare(deadline, today), do: Date.compare(deadline, today) != :gt
 end
