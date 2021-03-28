@@ -82,9 +82,11 @@ defmodule Shapt.Worker do
   @impl GenServer
   def handle_call({:enabled, toggle}, _from, state) do
     response =
-      if toggle in state[:toggles] do
-        [{_toggle, value}] = :ets.lookup(state[:table], toggle)
+      with true <- toggle in state[:toggles],
+           [{_toggle, value}] <- :ets.lookup(state[:table], toggle) do
         value
+      else
+        _ -> nil
       end
 
     {:reply, response, state}
