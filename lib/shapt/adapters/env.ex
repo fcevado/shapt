@@ -54,15 +54,11 @@ defmodule Shapt.Adapters.Env do
 
   defp from_file(file, toggles) do
     keys = Enum.map(toggles, &get_key/1)
+    key_toggles = Enum.map(toggles, &remap_keys/1)
     values = load_file(file, keys)
 
-    key_toggles =
-      toggles
-      |> Enum.map(&remap_keys/1)
-      |> Enum.into(%{})
-
-    values
-    |> Enum.map(fn {k, v} -> {key_toggles[k], to_boolean(v)} end)
+    key_toggles
+    |> Enum.map(fn {k, t} -> {t, values[k] |> to_boolean()} end)
     |> Enum.into(%{})
   end
 
@@ -77,6 +73,7 @@ defmodule Shapt.Adapters.Env do
         |> Enum.map(&String.split(&1, "="))
         |> Enum.map(&List.to_tuple/1)
         |> Enum.filter(&(elem(&1, 0) in keys))
+        |> Enum.into(%{})
     end
   end
 
