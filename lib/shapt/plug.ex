@@ -21,7 +21,7 @@ if Code.ensure_loaded?(Plug) do
            true <- Enum.all?(opts[:modules], &(&1 |> Process.whereis() |> is_pid())) do
         opts[:modules]
         |> Enum.map(&{&1, &1.all_values()})
-        |> prepare_response(conn, 200)
+        |> prepare_response(conn, 200, opts[:formatter])
       else
         _ ->
           conn
@@ -36,7 +36,7 @@ if Code.ensure_loaded?(Plug) do
 
         opts[:modules]
         |> Enum.map(&{&1, &1.all_values()})
-        |> prepare_response(conn, 201)
+        |> prepare_response(conn, 201, opts[:formatter])
       else
         _ ->
           conn
@@ -54,20 +54,19 @@ if Code.ensure_loaded?(Plug) do
       |> send_resp(status, body)
     end
 
-    defp prepare_response(modules, conn, status) do
-      cond do
-        Code.ensure_loaded?(Jason) ->
-          body = format_jason(modules)
-          halt_with_response(conn, "application/json", status, body)
+    defp prepare_response(modules, conn, status, Jason) do
+      body = format_jason(modules)
+      halt_with_response(conn, "application/json", status, body)
+    end
 
-        Code.ensure_loaded?(Poison) ->
-          body = format_poison(modules)
-          halt_with_response(conn, "application/json", status, body)
+    defp prepare_response(modules, conn, status, Poison) do
+      body = format_poison(modules)
+      halt_with_response(conn, "application/json", status, body)
+    end
 
-        true ->
-          body = format_text(modules)
-          halt_with_response(conn, "text/plain", status, body)
-      end
+    defp prepare_response(modules, conn, status, _) do
+      body = format_text(modules)
+      halt_with_response(conn, "text/plain", status, body)
     end
 
     defp format_text(modules) do
@@ -83,12 +82,14 @@ if Code.ensure_loaded?(Plug) do
     defp format_jason(modules) do
       modules
       |> Enum.map(fn {k, v} -> {inspect(k), v} end)
+      |> Enum.into(%{})
       |> Jason.encode!(escape: :html_safe, pretty: true)
     end
 
     defp format_poison(modules) do
       modules
       |> Enum.map(fn {k, v} -> {inspect(k), v} end)
+      |> Enum.into(%{})
       |> Poison.encode!()
     end
   end
