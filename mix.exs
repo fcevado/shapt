@@ -10,6 +10,7 @@ defmodule Shapt.MixProject do
       description: "An elixir feature toggle | flag | flipper library to make Blackbeard envy",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: compiler_paths(Mix.env()),
       package: package()
     ] ++
       docs()
@@ -53,4 +54,7 @@ defmodule Shapt.MixProject do
       }
     ]
   end
+
+  defp compiler_paths(:test), do: ["lib", "test/support"]
+  defp compiler_paths(_env), do: ["lib"]
 end
