@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Shapt do
       [] ->
         help()
 
-      _ ->
+      _any ->
         Mix.raise("Invalid arguments, expected: mix shapt")
     end
   end

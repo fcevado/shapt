@@ -23,7 +23,7 @@ if Code.ensure_loaded?(Plug) do
         |> Enum.map(&{&1, &1.all_values()})
         |> prepare_response(conn, 200, opts[:formatter])
       else
-        _ ->
+        _any ->
           conn
       end
     end
@@ -38,7 +38,7 @@ if Code.ensure_loaded?(Plug) do
         |> Enum.map(&{&1, &1.all_values()})
         |> prepare_response(conn, 201, opts[:formatter])
       else
-        _ ->
+        _any ->
           conn
       end
     end
@@ -64,7 +64,7 @@ if Code.ensure_loaded?(Plug) do
       halt_with_response(conn, "application/json", status, body)
     end
 
-    defp prepare_response(modules, conn, status, _) do
+    defp prepare_response(modules, conn, status, _formatter) do
       body = format_text(modules)
       halt_with_response(conn, "text/plain", status, body)
     end
