@@ -1,65 +1,150 @@
 defmodule Shapt do
-  @moduledoc false
+  @moduledoc """
+  Use this to create your own feature toggle worker as in the example:
+
+  ```elixir
+  defmodule TestModule do
+    use Shapt,
+      adapter: {Shapt.Adapters.Env, []},
+      toggles: [
+        feature_x?: %{
+          key: "MYAPP_FEATURE_X",
+          deadline: ~D[2019-12-31]
+          },
+        feature_y?: %{
+          deadline: ~D[2009-12-31]
+          }
+        ]
+  end
+  ```
+  """
+
+  @typedoc """
+  Options to be passed when using `Shapt`.
+  It's a keywordlist with the required keys `:adapter` and `:toggles`.
+  """
+  @type use_opts :: [adapter: {adapter(), adapter_opts()}, toggles: toggles()]
+
+  @typedoc """
+  A module that implements the `Shapt.Adapter` behaviour.
+  """
+  @type adapter :: module()
+
+  @typedoc """
+  Options to configure the adapter.
+  Check the adapter documentation for more details.
+  """
+  @type adapter_opts :: keyword()
+
+  @typedoc """
+  A keywordlist with the toggles names and its configuration.
+  """
+  @type toggles :: [{toggle_name(), toggle_opts()}]
+
+  @typedoc """
+  The name of a toggle.
+  This name gonna become a function on your module and gonna be name used to identify this toggle on all Shapt mix tasks.
+  """
+  @type toggle_name :: atom()
+
+  @typedoc """
+  It's a map with options to configure the individual toggle.
+  The only option that Shapt defines is the `:deadline`.
+  More options can be defined and used by the adapter.
+  """
+  @type toggle_opts :: %{deadline: deadline()}
+
+  @typedoc """
+  Defines a deadline for using the toggle.
+  It's used by `Mix.Tasks.Shapt.Expired` task and the functions `expired?/1` and `expired_toggles/0`.
+  """
+  @type deadline :: Date.t()
+
+  @doc false
   defmacro __using__(options) do
+    {adapter, adapter_conf} = options[:adapter]
+    toggle_conf = options[:toggles]
+    toggles = Enum.map(toggle_conf, &elem(&1, 0))
+
     [
       quote do
-        use GenServer
-        defdelegate init(opts), to: Shapt
-        defdelegate handle_call(msg, from, state), to: Shapt
-        defdelegate apply_toggle(value, truthy, falsy, env), to: Shapt
+        def child_spec([]) do
+          opts = [
+            toggles: unquote(toggle_conf),
+            adapter: {unquote(adapter), unquote(adapter_conf)},
+            module: __MODULE__
+          ]
+
+          Shapt.Worker.child_spec(opts)
+        end
 
         def child_spec(params) do
-          %{
-            id: __MODULE__,
-            start: {__MODULE__, :start_link, [params]},
-            restart: :permanent,
-            shutdown: 5000,
-            type: :worker
-          }
+          opts = [
+            toggles: unquote(toggle_conf),
+            adapter: params[:adapter],
+            module: __MODULE__
+          ]
+
+          Shapt.Worker.child_spec(opts)
         end
 
-        def start_link(opts) do
-          opts = Keyword.drop(opts, [:name])
-          GenServer.start_link(__MODULE__, unquote(options), [name: __MODULE__] ++ opts)
+        def start_link([]) do
+          opts = [
+            toggle_conf: unquote(toggle_conf),
+            adapter: unquote(adapter),
+            adapter_conf: unquote(adapter_conf),
+            name: __MODULE__
+          ]
+
+          Shapt.Worker.start_link(opts)
         end
 
-        def all_values do
-          GenServer.call(__MODULE__, :all_values)
+        def start_link(params) do
+          {adapter, adapter_conf} = params[:adapter]
+
+          opts = [
+            toggle_conf: unquote(toggle_conf),
+            adapter: adapter,
+            adapter_conf: adapter_conf,
+            name: __MODULE__
+          ]
+
+          Shapt.Worker.start_link(opts)
         end
+
+        def all_values, do: Shapt.Worker.all_values(__MODULE__)
+
+        def reload, do: Shapt.Worker.reload(__MODULE__)
 
         def enabled?(toggle) do
-          GenServer.call(__MODULE__, {:enabled, toggle})
+          if toggle in unquote(toggles) do
+            Shapt.Worker.enabled?(__MODULE__, toggle)
+          else
+            :error
+          end
         end
 
         def expired?(toggle) do
-          GenServer.call(__MODULE__, {:expired, toggle})
+          Shapt.Helpers.do_expired(toggle, unquote(toggle_conf))
         end
 
         def expired_toggles do
-          GenServer.call(__MODULE__, {:expired, :all})
-        end
-
-        def reload do
-          GenServer.call(__MODULE__, :reload)
+          Shapt.Helpers.do_all_expired(unquote(toggle_conf))
         end
 
         def template do
-          GenServer.call(__MODULE__, :template)
+          Shapt.Helpers.do_template(unquote(adapter), unquote(adapter_conf), unquote(toggle_conf))
         end
 
         def toggle(name, opts) do
-          env = opts[:env]
-          truthy = opts[:on]
-          falsy = opts[:off]
-
-          name
-          |> enabled?()
-          |> apply_toggle(truthy, falsy, env)
+          if name in unquote(toggles) do
+            name
+            |> enabled?()
+            |> Shapt.Helpers.apply_toggle(opts)
+          else
+            :error
+          end
         end
-
-        def instance_name, do: nil
-
-        defoverridable instance_name: 0
       end
       | Enum.map(options[:toggles], fn {name, _opts} ->
           quote do
@@ -67,125 +152,5 @@ defmodule Shapt do
           end
         end)
     ]
-  end
-
-  @environment Mix.env()
-
-  def init(opts) do
-    {adapter, adapter_opts} = get_adapter(opts)
-
-    state = %{
-      ets: create_table(opts),
-      ets_loaded: false,
-      environment: @environment,
-      toggles: opts[:toggles],
-      adapter: adapter,
-      adapter_opts: adapter_opts
-    }
-
-    {:ok, state}
-  end
-
-  def handle_call(:all_values, _from, state) do
-    response =
-      if state[:ets] do
-        :ets.tab2list(state[:ets])
-        |> Enum.into(%{})
-      else
-        state[:toggles]
-        |> Enum.map(fn {k, o} ->
-          {state[:adapter].key_name(k, o), state[:adapter].enabled?(k, state)}
-        end)
-        |> Enum.into(%{})
-      end
-
-    {:reply, response, state}
-  end
-
-  def handle_call({:enabled, toggle}, _from, state) do
-    state = load(state)
-
-    value =
-      if state[:ets] do
-        key_name = state[:adapter].key_name(toggle, state[:toggles][toggle])
-        [{^key_name, value}] = :ets.lookup(state[:ets], key_name)
-        value
-      else
-        state[:adapter].enabled?(toggle, state)
-      end
-
-    {:reply, value, state}
-  end
-
-  def handle_call({:expired, :all}, _from, state) do
-    expired =
-      state[:toggles]
-      |> Enum.filter(&is_expired?/1)
-      |> Enum.map(fn {name, _opts} -> name end)
-
-    {:reply, expired, state}
-  end
-
-  def handle_call({:expired, name}, _from, state) do
-    {:reply, is_expired?({name, state[:toggles][name]}), state}
-  end
-
-  def handle_call(:reload, _from, state) do
-    if state[:ets] do
-      :ets.delete_all_objects(state[:ets])
-    end
-
-    {:reply, :ok, load(%{state | ets_loaded: false})}
-  end
-
-  def handle_call(:template, _from, state) do
-    template = state[:adapter].template(state[:toggles], state[:adapter_opts])
-
-    {:reply, template, state}
-  end
-
-  def apply_toggle(false, _, tuple, _) when is_tuple(tuple),
-    do: apply(elem(tuple, 0), elem(tuple, 1), elem(tuple, 2))
-
-  def apply_toggle(true, function, _, env) when is_function(function),
-    do: apply(function, env)
-
-  def apply_toggle(false, _, function, env) when is_function(function),
-    do: apply(function, env)
-
-  def apply_toggle(true, value, _, _), do: value
-  def apply_toggle(false, _, value, _), do: value
-
-  defp get_adapter(opts) do
-    case Mix.env() do
-      :prod ->
-        opts[:adapter][:prod] || {Shapt.Adapters.Env, []}
-
-      :dev ->
-        opts[:adapter][:dev] || {Shapt.Adapters.DotEnv, []}
-
-      :test ->
-        opts[:adapter][:test] || opts[:adapter][:dev] || {Shapt.Adapters.DotEnv, []}
-    end
-  end
-
-  defp create_table(opts) do
-    if opts[:ets_cache] do
-      :ets.new(:shapt, [:set, :private])
-    else
-      nil
-    end
-  end
-
-  defp load(%{ets: nil} = state), do: state
-  defp load(%{ets_loaded: true} = state), do: state
-
-  defp load(state) do
-    state[:adapter].load_all(state)
-    %{state | ets_loaded: true}
-  end
-
-  defp is_expired?({_name, opts}) do
-    Date.compare(opts[:deadline], Date.utc_today()) != :gt
   end
 end

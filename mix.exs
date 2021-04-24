@@ -1,7 +1,7 @@
 defmodule Shapt.MixProject do
   use Mix.Project
 
-  @version "0.0.4"
+  @version "0.1.0"
   def project do
     [
       app: :shapt,
@@ -10,6 +10,7 @@ defmodule Shapt.MixProject do
       description: "An elixir feature toggle | flag | flipper library to make Blackbeard envy",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: compiler_paths(Mix.env()),
       package: package()
     ] ++
       docs()
@@ -24,7 +25,10 @@ defmodule Shapt.MixProject do
   defp deps do
     [
       {:plug, "~> 1.8.3", optional: true},
-      {:ex_doc, "~> 0.21.1", only: :dev, runtime: false}
+      {:jason, "~> 1.2.2", optional: true},
+      {:poison, "~> 4.0.1", optional: true},
+      {:credo, "~> 1.5.5", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.24.2", only: :dev, runtime: false}
     ]
   end
 
@@ -50,4 +54,7 @@ defmodule Shapt.MixProject do
       }
     ]
   end
+
+  defp compiler_paths(:test), do: ["lib", "test/support"]
+  defp compiler_paths(_env), do: ["lib"]
 end
