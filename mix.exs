@@ -1,7 +1,7 @@
 defmodule Shapt.MixProject do
   use Mix.Project
 
-  @version "0.0.4"
+  @version "0.1.0"
   def project do
     [
       app: :shapt,
@@ -28,7 +28,7 @@ defmodule Shapt.MixProject do
       {:jason, "~> 1.2.2", optional: true},
       {:poison, "~> 4.0.1", optional: true},
       {:credo, "~> 1.5.5", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.21.1", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.24.2", only: :dev, runtime: false}
     ]
   end
 
