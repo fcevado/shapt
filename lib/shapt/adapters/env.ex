@@ -1,7 +1,36 @@
 defmodule Shapt.Adapters.Env do
   @behaviour Shapt.Adapter
   @moduledoc """
+  An adapter to load toggle state from environment variables or an env file.
   """
+
+  @typedoc """
+  Additional option to configure the toggle.
+  #{__MODULE__} only defines one additional option that is `:key`.
+  The key is the name of the environment variable to get the toggle state.
+
+  If there is no `:key` set for a toggle, the adapter gonna abstract an environment variable from the `Shapt.toggle_name()`.
+  The environment variable for that case gonna be the `t:Shapt.toggle_name/0` upcased and stripped from a question mark, if there is any.
+  """
+  @type toggle_opts :: %{key: String.t()}
+
+  @typedoc """
+  Configuration for this adapter.
+  - `from`: source of the state of the toggles.
+    The only options are `:file` and `:env`.
+    If the `from` is set to `:file`, the option `file` is required.
+
+  - `file`: Required when `from` is set to `:file`.
+    It gonna be envinroment variable file used to load the toggles state.
+  """
+  @type adapter_opts :: [from: :file | :env, file: filename()]
+
+  @typedoc """
+  Path to a file that must exist when starting the Shapt worker.
+  The content of the file must be a pair `ENVVAR=true` per line.
+  This gonna be loaded and used as the state of the toggles.
+  """
+  @type filename :: Path.t()
 
   @impl Shapt.Adapter
   def load(opts, toggles) do

@@ -1,6 +1,9 @@
 defmodule Shapt.Worker do
+  @moduledoc false
+
   use GenServer
 
+  @spec child_spec(keyword()) :: map()
   def child_spec(conf) do
     module = conf[:module]
     {adapter, adapter_conf} = conf[:adapter]
@@ -21,18 +24,22 @@ defmodule Shapt.Worker do
     }
   end
 
+  @spec start_link(keyword()) :: {:ok, pid()} | {:error, term()}
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @spec all_values(term()) :: map()
   def all_values(worker) do
     GenServer.call(worker, :all_values)
   end
 
+  @spec enabled?(term(), atom()) :: boolean()
   def enabled?(worker, toggle) do
     GenServer.call(worker, {:enabled, toggle})
   end
 
+  @spec reload(term()) :: :ok
   def reload(worker) do
     GenServer.call(worker, :reload)
   end
@@ -48,7 +55,7 @@ defmodule Shapt.Worker do
     end
   end
 
-  @ipml GenServer
+  @impl GenServer
   def handle_continue(opts, nil) do
     table = :ets.new(:shapt, [:set, :private])
     adapter = opts[:adapter]
@@ -86,7 +93,7 @@ defmodule Shapt.Worker do
            [{_toggle, value}] <- :ets.lookup(state[:table], toggle) do
         value
       else
-        _ -> nil
+        _any -> nil
       end
 
     {:reply, response, state}
