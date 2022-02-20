@@ -2,6 +2,7 @@ defmodule Shapt.Worker do
   @moduledoc false
 
   use GenServer
+  @behaviour Shapt.Mock
 
   @spec child_spec(keyword()) :: map()
   def child_spec(conf) do
@@ -34,6 +35,7 @@ defmodule Shapt.Worker do
     GenServer.call(worker, :all_values)
   end
 
+  @impl Shapt.Mock
   @spec enabled?(term(), atom()) :: boolean()
   def enabled?(worker, toggle) do
     GenServer.call(worker, {:enabled, toggle})

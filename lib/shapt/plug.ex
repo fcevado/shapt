@@ -4,10 +4,16 @@ if Code.ensure_loaded?(Plug) do
     This plug provides two endpoints:
     - GET that will that will return the current value of your toggles on runtime.
     - POST that will reload the current value of your toggles on runtime.
+
+    Available options:
+    - `path`
+    - `modules`
+    - `formatter`
     ```
     plug Shapt.Plug,
       path: "/toggles",
-      modules: [TestModule]
+      modules: [TestModule],
+      formatter: Jason
     ```
     """
     use Plug.Router

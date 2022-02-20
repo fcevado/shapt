@@ -68,6 +68,7 @@ defmodule Shapt do
 
     [
       quote do
+        
         def child_spec([]) do
           opts = [
             toggles: unquote(toggle_conf),
@@ -118,7 +119,7 @@ defmodule Shapt do
 
         def enabled?(toggle) do
           if toggle in unquote(toggles) do
-            Shapt.Worker.enabled?(__MODULE__, toggle)
+            adapter().enabled?(__MODULE__, toggle)
           else
             :error
           end
@@ -144,6 +145,10 @@ defmodule Shapt do
           else
             :error
           end
+        end
+
+        defp adapter do
+          Application.get_env(:shapt, __MODULE__)[:mock] || Shapt.Worker
         end
       end
       | Enum.map(options[:toggles], fn {name, _opts} ->
